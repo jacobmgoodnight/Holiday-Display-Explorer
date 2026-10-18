@@ -81,8 +81,13 @@ The build creates a hashed precache manifest. The app shell, icons and site data
 
 `npm test`: 24 automated tests cover seasonal labels, duplicate conflicts/proximity, missing points, CSV/JSON, unsafe URLs, timezone/overnight hours, route endpoints, viewing/return times, offline approximation, 20-stop navigation segmentation, private-start sharing, and routing failure.
 
-Production build and `/holiday-display-explorer/` asset loading were tested locally. Browser checks include desktop and 390px mobile layout, favorites/selected stops surviving reload, and saved tour behavior. The included optional worker requires live credential testing; no live API or actual GitHub Pages deployment is claimed. See [QA notes](docs/validation.md).
+Production build and `/holiday-display-explorer/` asset loading were tested locally. Browser checks include desktop and 390px mobile layout, favorites/selected stops surviving reload, and saved tour behavior. The included optional worker requires live credential testing; the optional live API has not been tested. GitHub Pages deployment succeeded on 2026-10-18. See [QA notes](docs/validation.md).
 
 Modules: `data.ts` schema/imports; `route.ts` optimization/timeline/navigation/provider contract; `Map.tsx` Leaflet rendering; `App.tsx` interaction and local storage; `serverless/` optional private routing proxy. These boundaries can be reused behind a backend or native wrapper.
 
+
+
+## Scheduled imports
+
+The daily authorized-feed importer is implemented; no third-party feed is activated. See [feed setup and review workflow](feeds/README.md) and the [provider access request draft](docs/feed-access-request.md). It produces review artifacts without changing published data. 28 automated tests now pass, including feed validation, failures and size limits.
 

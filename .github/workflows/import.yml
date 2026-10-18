@@ -1,0 +1,27 @@
+name: Fetch authorized display feeds
+on:
+  schedule:
+    - cron: '17 10 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: display-import
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --experimental-strip-types scripts/fetch-feeds.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: display-import-review
+          path: import-output/
+          retention-days: 7

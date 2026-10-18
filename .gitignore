@@ -5,3 +5,4 @@ dist/
 .npm-cache/
 *.tsbuildinfo
 *.zip
+import-output/
