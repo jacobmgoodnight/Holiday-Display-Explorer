@@ -4,7 +4,9 @@ on:
     - cron: '17 10 * * *'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+  pages: write
+  id-token: write
 concurrency:
   group: display-import
   cancel-in-progress: false
@@ -25,3 +27,17 @@ jobs:
           name: display-import-review
           path: import-output/
           retention-days: 7
+      - name: Save the review snapshot
+        run: |
+          cp import-output/candidate.json public/data/source-candidates.json
+          cp import-output/report.json public/data/import-report.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/source-candidates.json public/data/import-report.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh source discoveries for review"
+            git push
+          fi
+  publish-review-snapshot:
+    needs: fetch
+    uses: ./.github/workflows/deploy.yml

@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "indy-christmas",
+    "name": "Indy with Kids · Christmas guide",
+    "enabled": true,
+    "url": "https://indywithkids.com/christmas-lights-list-indianapolis-central-indiana/",
+    "format": "indy-html",
+    "attributionUrl": "https://indywithkids.com/christmas-lights-list-indianapolis-central-indiana/",
+    "permission": "Site owner reports permission to read existing pages and requests this parser, 2026-10-18. Extract factual listing fields for review; exclude photos, editorial descriptions and contact details."
+  },
+  {
+    "id": "frightmaps-indianapolis",
+    "name": "FrightMaps · Indianapolis directory",
+    "enabled": true,
+    "url": "https://frightmaps.com/metro/indianapolis",
+    "format": "frightmaps-html",
+    "attributionUrl": "https://frightmaps.com/metro/indianapolis",
+    "permission": "Owner reports permission to read existing pages and explicitly requests FrightMaps integration, 2026-10-19. Limited to public directory facts for review, with city-level locations only. No photos, descriptions, hidden coordinates or account access."
+  }
+]

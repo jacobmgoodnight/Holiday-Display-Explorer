@@ -10,3 +10,7 @@
 - Address geocoding is not configured. Address-only records remain usable in the list; coordinates/map pin/current location are required for routes.
 - No live third-party display imports or scheduled scraping jobs exist. Source status is documented individually in source-research.md.
 
+## Scraping and contributions update
+
+37 tests pass. Live fetches returned 167 Indy with Kids and 139 FrightMaps records. Mobile 390px checks verified snapshot import, editable paste preview, and persistence of a test rating, comment and uploaded app-icon image after reload (test contributions then removed). Tests cover changed layouts, duplicate IDs, unsafe links, missing years, and avoiding hidden coordinates and copied photos. Production build passed with Vite's runner config loader due the local sandbox's ancestor-directory restriction. Physical iPhone photo selection remains untested.
+

@@ -51,6 +51,9 @@ import {
 } from "./route";
 import { DisplayMap } from "./Map";
 import { demo } from "./demo";
+import { parsePastedDisplays } from "./paste";
+import { DisplayMemories } from "./DisplayMemories";
+import { clearMemories } from "./memories";
 const region = { lat: 39.785, lng: -85.94 };
 const defaultPlan: Plan = {
   ids: [],
@@ -91,6 +94,11 @@ const fmt = (d: Date | null) =>
     ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : "Unavailable";
 export default function App() {
+  const [memoryDisplay, setMemoryDisplay] = useState<Display | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importReport, setImportReport] = useState("");
+  const [importSource, setImportSource] = useState("all");
   const [local, setLocal] = useLocal<Display[]>("hde-displays", []),
     [favorites, setFavorites] = useLocal<string[]>("hde-favorites", []),
     [plan, setPlan] = useLocal<Plan>("hde-plan", defaultPlan),
@@ -108,6 +116,7 @@ export default function App() {
       routingEndpoint: "",
       submissionUrl: "",
       contactEmail: "",
+      correctionUrl: "",
     });
   const [tab, setTab] = useState("Explore"),
     [query, setQuery] = useState(""),
@@ -449,8 +458,11 @@ export default function App() {
         sources: [{ name: "Manual entry", url: draft.source }],
       });
       setLocal((v) => mergeDisplays([...v, d]));
-      setModal("");
-      setMessage("Display saved on this device as unverified.");
+      setMemoryDisplay(d);
+      setModal("Pictures, comments & rating");
+      setMessage(
+        "Display saved on this device as unverified. You can now add your pictures and notes.",
+      );
     } catch (e) {
       setMessage((e as Error).message);
     }
@@ -550,6 +562,13 @@ export default function App() {
           {d.photos?.map((photo, i) => (
             <p key={"photo" + i}>
               <a href={safeUrl(photo.url)} target="_blank" rel="noreferrer">
+                <img
+                  className="authorized-photo"
+                  src={safeUrl(photo.url)}
+                  alt={`${d.name} — ${photo.credit}`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                />
                 Authorized photo · {photo.credit}
               </a>
             </p>
@@ -560,6 +579,26 @@ export default function App() {
             </p>
           ))}
         </details>
+        <button
+          className="visit-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setMemoryDisplay(d);
+            setModal("Pictures, comments & rating");
+          }}
+        >
+          Pictures, comments & rating
+        </button>
+        {!d.demo && d.address && !hasPoint(d) && (
+          <a
+            className="source-link"
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.address)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Check address in Google Maps ↗
+          </a>
+        )}
         <button
           className={"add-button " + (plan.ids.includes(d.id) ? "added" : "")}
           onClick={(e) => {
@@ -1444,12 +1483,21 @@ export default function App() {
                 </button>
               </>
             )}
+            {modal === "Pictures, comments & rating" && memoryDisplay && (
+              <DisplayMemories
+                key={memoryDisplay.id}
+                id={memoryDisplay.id}
+                name={memoryDisplay.name}
+              />
+            )}
             {modal === "Sources & data" && (
               <>
                 <p>
-                  No third-party display feeds are connected. These are
-                  reference links only. Browse an original source, then manually
-                  add a discovery you are allowed to use.
+                  Indy with Kids’ Christmas guide and FrightMaps’ Indianapolis
+                  directory are scraped daily into a review snapshot with the
+                  site owner’s reported permission. FrightMaps entries are
+                  city-level discoveries. Use Import to review and add these
+                  discoveries locally. Other sources remain reference links.
                 </p>
                 {sources.map(([name, url]) => (
                   <a
@@ -1461,18 +1509,27 @@ export default function App() {
                   >
                     <span>
                       {name}
-                      <small>Reference only · not imported</small>
+                      <small>
+                        {name === "Indy with Kids · Christmas" ||
+                        name === "FrightMaps"
+                          ? "Connected · daily scrape for review"
+                          : "Reference only · not imported"}
+                      </small>
                     </span>
                     <ExternalLink size={16} />
                   </a>
                 ))}
                 <p>
                   Connected inputs: manual entry, validated CSV / JSON, and the
-                  site owner’s reviewed static dataset. Photos are not imported.
-                  Today’s import never counts as seasonal confirmation.
+                  site owner’s reviewed static dataset. The scraper does not
+                  copy photos or editorial descriptions. Today’s import never
+                  counts as seasonal confirmation.
                 </p>
                 <button onClick={() => setModal("Add a display")}>
                   Add a discovery
+                </button>
+                <button onClick={() => setModal("Import displays")}>
+                  Review scraped discoveries
                 </button>
               </>
             )}
@@ -1483,6 +1540,131 @@ export default function App() {
                   add locally. Nothing here writes to GitHub or publishes
                   submissions.
                 </p>
+                <h3>Source discoveries & updates</h3>
+                <p>
+                  Fetch the latest daily snapshot, choose records, and check
+                  their locations before adding them. Source year is preserved;
+                  unknown coordinates cannot be used to optimize a tour.
+                </p>
+                <label>
+                  Discovery source
+                  <select
+                    value={importSource}
+                    onChange={(e) => {
+                      setImportSource(e.target.value);
+                      setImported([]);
+                      setImportReport("");
+                    }}
+                  >
+                    <option value="all">All connected sources</option>
+                    <option value="indy-christmas">
+                      Indy with Kids · Christmas
+                    </option>
+                    <option value="frightmaps-indianapolis">
+                      FrightMaps · Indianapolis
+                    </option>
+                  </select>
+                </label>
+                <button
+                  disabled={importBusy}
+                  onClick={async () => {
+                    setImportBusy(true);
+                    setImported([]);
+                    setImportReport("");
+                    try {
+                      const r = await fetch(
+                        `${import.meta.env.BASE_URL}data/source-candidates.json`,
+                        { cache: "no-store" },
+                      );
+                      if (!r.ok)
+                        throw Error(
+                          "Snapshot unavailable. Try again online later.",
+                        );
+                      const rows = adapters[0].parse(await r.text());
+                      // Adapter import dates reflect local import; report the actual scrape separately.
+                      const reportResponse = await fetch(
+                        `${import.meta.env.BASE_URL}data/import-report.json`,
+                        { cache: "no-store" },
+                      );
+                      if (!reportResponse.ok)
+                        throw Error("Snapshot report unavailable");
+                      const report = await reportResponse.json();
+                      const filteredRows =
+                        importSource === "all"
+                          ? rows
+                          : rows.filter((d) =>
+                              d.id.startsWith(importSource + ":"),
+                            );
+                      setImported(filteredRows);
+                      const age = Date.now() - Date.parse(report.fetchedAt);
+                      setImportReport(
+                        `Source scrape: ${report.fetchedAt}. ${filteredRows.length} records ready for review. ${!navigator.onLine || r.headers.get("X-HDE-Offline") === "1" ? "Offline cached copy. " : ""}${age > 36 * 3600000 ? "Snapshot is more than 36 hours old; check the latest scrape run." : ""}`,
+                      );
+                    } catch (e) {
+                      setMessage((e as Error).message);
+                    } finally {
+                      setImportBusy(false);
+                    }
+                  }}
+                >
+                  {importBusy ? "Loading snapshot…" : "Refresh latest snapshot"}
+                </button>
+                <p role="status">{importReport}</p>
+                <a
+                  className="source-link"
+                  href="https://github.com/jacobmgoodnight/Holiday-Display-Explorer/actions/workflows/import.yml"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Run a fresh scrape in GitHub (owner) ↗
+                </a>
+                <p className="small">
+                  Owner: sign into GitHub, choose Run workflow, and wait for
+                  scraping and deployment to finish. Then refresh the snapshot
+                  here. This refresh button loads the published snapshot; it
+                  does not directly scrape provider sites. Refreshed records are
+                  previewed before replacing matching local records.
+                </p>
+                <h3>Paste discoveries</h3>
+                <p>
+                  Paste JSON, CSV, or notes. For notes, put the display name on
+                  the first line and address on the next. Separate displays with
+                  a blank line. Optional labels: Town:, Season:, Year:, Source:,
+                  Latitude:, Longitude:, Maps:.
+                </p>
+                <label>
+                  Pasted display text
+                  <textarea
+                    value={importText}
+                    maxLength={100000}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder={
+                      "Example display\n123 Example Road, Example Town\nSeason: Christmas\nYear: 2025"
+                    }
+                  />
+                </label>
+                <button
+                  onClick={() => {
+                    setImported([]);
+                    try {
+                      const raw = importText.trim();
+                      const rows = raw.startsWith("[")
+                        ? adapters[0].parse(raw)
+                        : /^id\s*,/i.test(raw)
+                          ? adapters[1].parse(raw)
+                          : parsePastedDisplays(raw);
+                      setImported(rows);
+                      setMessage(
+                        "Review and edit extracted records below. Unknown fields have not been guessed.",
+                      );
+                    } catch (e) {
+                      setMessage((e as Error).message);
+                    }
+                  }}
+                >
+                  Parse pasted text
+                </button>
+                <h3>Upload CSV / JSON</h3>
                 <input
                   type="file"
                   accept=".json,.csv"
@@ -1509,25 +1691,140 @@ export default function App() {
                 {imported.length > 0 && (
                   <>
                     <p>{imported.length} validated records</p>
+                    <button
+                      onClick={() =>
+                        setImported((rows) =>
+                          rows.filter((d) =>
+                            /^(New Palestine|Greenfield|McCordsville)$/i.test(
+                              d.town,
+                            ),
+                          ),
+                        )
+                      }
+                    >
+                      Keep launch-area displays only
+                    </button>
+                    <button
+                      onClick={() =>
+                        download("reviewed-discoveries.json", imported)
+                      }
+                    >
+                      Download review file
+                    </button>
                     <div className="import-preview">
                       {imported.map((d) => (
-                        <p key={d.id}>
-                          {d.name} · {status(d)}{" "}
-                          {d.conflicts.length
-                            ? "· conflicts require review"
-                            : ""}
-                        </p>
+                        <div className="review-record" key={d.id}>
+                          <strong>{d.name}</strong> · {status(d)} ·{" "}
+                          {d.year || "Year unknown"}
+                          <p>
+                            {d.address} · {d.type} · {d.cost}
+                          </p>
+                          <p>
+                            {hasPoint(d)
+                              ? "Coordinates supplied — check before adding"
+                              : "Coordinates unknown — address lookup needed for tour optimization"}
+                          </p>
+                          {d.conflicts.length ? d.conflicts.join(" · ") : ""}
+                          <details>
+                            <summary>Edit extracted fields</summary>
+                            {(
+                              ["name", "address", "town", "lat", "lng"] as const
+                            ).map((field) => (
+                              <label key={field}>
+                                {field}
+                                <input
+                                  value={d[field] ?? ""}
+                                  onChange={(e) =>
+                                    setImported((rows) =>
+                                      rows.map((r) =>
+                                        r.id === d.id
+                                          ? {
+                                              ...r,
+                                              [field]:
+                                                field === "lat" ||
+                                                field === "lng"
+                                                  ? e.target.value === ""
+                                                    ? null
+                                                    : Number(e.target.value)
+                                                  : e.target.value,
+                                            }
+                                          : r,
+                                      ),
+                                    )
+                                  }
+                                />
+                              </label>
+                            ))}
+                            <label>
+                              Type
+                              <select
+                                value={d.type}
+                                onChange={(e) =>
+                                  setImported((rows) =>
+                                    rows.map((r) =>
+                                      r.id === d.id
+                                        ? {
+                                            ...r,
+                                            type: e.target
+                                              .value as Display["type"],
+                                          }
+                                        : r,
+                                    ),
+                                  )
+                                }
+                              >
+                                {[
+                                  "Unknown",
+                                  "Residential yard display",
+                                  "Synchronized light show",
+                                  "Home haunt",
+                                  "Business",
+                                  "Attraction",
+                                ].map((t) => (
+                                  <option key={t}>{t}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </details>
+                          <button
+                            onClick={() =>
+                              setImported((rows) =>
+                                rows.filter((r) => r.id !== d.id),
+                              )
+                            }
+                          >
+                            Remove from import
+                          </button>
+                        </div>
                       ))}
                     </div>
                     <button
                       className="primary"
                       onClick={() => {
-                        setLocal((v) => mergeDisplays([...v, ...imported]));
-                        setImported([]);
-                        setModal("");
-                        setMessage(
-                          "Imported locally. Export a reviewed file to prepare a repository update.",
-                        );
+                        try {
+                          const checked = imported.map((d) =>
+                            displaySchema.parse(d),
+                          );
+                          setLocal((v) =>
+                            mergeDisplays([
+                              ...v.filter(
+                                (old) =>
+                                  !checked.some((row) => row.id === old.id),
+                              ),
+                              ...checked,
+                            ]),
+                          );
+                          setPrefs((v) => ({ ...v, demo: false }));
+                          setImported([]);
+                          setModal("");
+                          setMessage(
+                            "Imported locally. Export a reviewed file to prepare a repository update.",
+                          );
+                        } catch {
+                          setMessage(
+                            "Check edited names and coordinates. Latitude and longitude must both be valid or both empty.",
+                          );
+                        }
                       }}
                     >
                       Add these displays locally
@@ -1596,6 +1893,11 @@ export default function App() {
                   point.
                 </p>
                 <p>
+                  Pictures, personal comments and ratings use this browser’s
+                  device storage. They are never uploaded or shared with a tour.
+                  Clearing browser data removes them.
+                </p>
+                <p>
                   Online maps send visible map tile requests to OpenStreetMap.
                   Configured road routing receives tour coordinates. External
                   navigation has its own privacy policy.
@@ -1604,6 +1906,15 @@ export default function App() {
                 /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(config.contactEmail) ? (
                   <a href={`mailto:${config.contactEmail}`}>
                     Request a homeowner removal or correction
+                  </a>
+                ) : safeUrl(config.correctionUrl || "") ? (
+                  <a
+                    href={safeUrl(config.correctionUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Request a homeowner removal or correction (GitHub account
+                    required)
                   </a>
                 ) : (
                   <p className="warning">
@@ -1620,13 +1931,19 @@ export default function App() {
                   </a>
                 )}
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    try {
+                      await clearMemories();
+                    } catch (e) {
+                      setMessage((e as Error).message);
+                      return;
+                    }
                     setLocal([]);
                     setFavorites([]);
                     setSaved([]);
                     setPlan(defaultPlan);
                     setMessage(
-                      "Local displays, favorites, saved tours, and route progress cleared.",
+                      "Local displays, pictures, comments, ratings, favorites, saved tours, and route progress cleared.",
                     );
                   }}
                 >

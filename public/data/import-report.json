@@ -1,0 +1,17 @@
+{
+  "fetchedAt": "2026-10-19T11:01:09.172Z",
+  "status": "review-required",
+  "sources": [
+    {
+      "source": "indy-christmas",
+      "records": 167,
+      "status": "fetched"
+    },
+    {
+      "source": "frightmaps-indianapolis",
+      "records": 139,
+      "status": "fetched"
+    }
+  ],
+  "records": 306
+}

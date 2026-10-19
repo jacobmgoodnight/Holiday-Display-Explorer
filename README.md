@@ -52,7 +52,7 @@ Set `contactEmail` in `public/config.json` before publishing real records. Until
 
 ## Connected sources
 
-**No third-party listing service is connected.** FrightMaps, ChristmasPrism, both Indy with Kids guides, and Indy Christmas Lights are **reference links only**. CSV, JSON, manual entry and the static repository dataset are active inputs. See [source and provider research](docs/source-research.md), checked 2026-10-18. FrightMaps documents AI-platform discovery access, but its scraping prohibition and unverified standalone redistribution scope rule out assuming a general mirror license. Seek explicit access/permission before enabling an adapter.
+**Indy with Kids Christmas and FrightMaps Indianapolis are connected through HTML parsers producing daily review snapshots, based on the owner's stated permission.** ChristmasPrism, Indy with Kids Halloween, and Indy Christmas Lights remain reference links only. CSV, JSON, manual entry and the static repository dataset are active inputs. See [source and provider research](docs/source-research.md). FrightMaps' general terms prohibit scraping; this integration relies on the owner's reported authorization, not a general mirror license. FrightMaps results are city-level only.
 
 The adapter interface (`ImportAdapter`) allows future authorized feeds to normalize into the same schema. Only schedule a feed job after documenting credentials, license, attribution, limits, freshness and allowed fields. Validate before committing, review conflicts, keep last-imported separate from last-confirmed, and do not publish unreviewed submissions.
 
@@ -89,5 +89,10 @@ Modules: `data.ts` schema/imports; `route.ts` optimization/timeline/navigation/p
 
 ## Scheduled imports
 
-The daily authorized-feed importer is implemented; no third-party feed is activated. See [feed setup and review workflow](feeds/README.md) and the [provider access request draft](docs/feed-access-request.md). It produces review artifacts without changing published data. 28 automated tests now pass, including feed validation, failures and size limits.
+The daily importer is active for Indy with Kids Christmas and FrightMaps Indianapolis. The combined snapshot contains 306 discoveries (167 and 139 respectively). Import offers source selection, network-first snapshot refresh, and a link to run a fresh scrape through the authenticated GitHub workflow. It publishes review snapshots, leaving the reviewed directory unchanged. See [feed setup](feeds/README.md). All 37 automated tests pass.
+
+
+## Scraping, paste and personal contributions
+
+See [scraping and contribution guide](docs/scraping-and-contributions.md). The first live scrape returned 167 previous-season discoveries. Load them from Import, review and add locally. Each display supports personal pictures, comments and ratings stored on the device. These are not public reviews. No scraped photos or editorial descriptions are copied.
 

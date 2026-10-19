@@ -6,3 +6,4 @@ dist/
 *.tsbuildinfo
 *.zip
 import-output/
+.cache/

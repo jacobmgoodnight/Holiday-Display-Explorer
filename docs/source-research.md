@@ -1,5 +1,7 @@
 # Source and provider review — 2026-10-18
 
+Update 2026-10-19: the owner explicitly requested FrightMaps integration under their stated permission to read existing pages. The public Indianapolis-directory adapter is enabled; its earlier reference-only decision below is superseded for that page. General terms still prohibit scraping; authorization is reported by the owner, not independently granted by this application. Only city-level names, admission labels and source links are imported, without photos or exact locations. See scraping-and-contributions.md.
+
 This is an access/implementation investigation, not legal advice or a grant of permission. No listings or photographs were harvested. Missing public documentation is not proof that no private API exists.
 
 | Source | Observed availability and constraints | Decision |
@@ -31,3 +33,7 @@ FrightMaps' [privacy policy](https://frightmaps.com/privacy), sections 5–6, ex
 Indy Christmas Lights has an interactive [map](https://indychristmaslights.com/map.php) and [submission workflow](https://indychristmaslights.com/submit.php), but these do not document a licensed third-party export. An owner-approved JSON/CSV feed or scheduled export could be integrated. For editorial guides, obtain permission for a factual listing feed; do not copy descriptions or photos.
 
 Once a source authorizes an export, a scheduled GitHub Action can fetch it server-side, validate it through the existing schema, and produce the static dataset. This avoids browser CORS limitations and keeps credentials in Actions secrets, but it does not confer data rights or recover intentionally withheld fields.
+
+## Authorized adapter activated
+
+On 2026-10-18 the site owner reported permission to read existing pages and requested the Indy with Kids Christmas HTML parser. That source now produces daily review snapshots; its reference-only decision above is superseded for this adapter. No photos or editorial descriptions are reused. Other sources remain reference-only. See scraping-and-contributions.md for exact scope and limits.
