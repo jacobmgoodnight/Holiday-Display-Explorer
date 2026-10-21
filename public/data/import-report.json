@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-10-20T10:50:43.474Z",
+  "fetchedAt": "2026-10-21T10:51:35.975Z",
   "status": "review-required",
   "sources": [
     {
@@ -9,9 +9,9 @@
     },
     {
       "source": "frightmaps-indianapolis",
-      "records": 139,
+      "records": 140,
       "status": "fetched"
     }
   ],
-  "records": 306
+  "records": 307
 }
